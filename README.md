@@ -1,6 +1,6 @@
 # Payments API QA Framework
 
-[![CI](https://github.com/YOUR-USERNAME/payments-api-qa-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR-USERNAME/payments-api-qa-framework/actions/workflows/ci.yml)
+[![CI](https://github.com/reubenamissah/payments-api-qa-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/reubenamissah/payments-api-qa-framework/actions/workflows/ci.yml)
 
 An end-to-end **API test automation project** for a fintech-style payments service: a pytest framework,
 a CI/CD pipeline, load testing, and Docker support. It shows how I approach quality on money-moving
@@ -42,7 +42,7 @@ copy of the API and checked that the suite turned red each time:
 ## Run it yourself
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/payments-api-qa-framework.git
+git clone https://github.com/reubenamissah/payments-api-qa-framework.git
 cd payments-api-qa-framework
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
