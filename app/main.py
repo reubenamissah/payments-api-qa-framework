@@ -20,6 +20,7 @@ from typing import Literal
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -151,11 +152,16 @@ class TransferIn(StrictModel):
 
 
 # ----------------------------------------------------------------------------- security
-def require_token(authorization: str | None = Header(default=None)) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
+bearer_scheme = HTTPBearer(auto_error=False)  # registers the "Authorize" button in /docs
+
+
+def require_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> str:
+    if credentials is None:
         raise APIError(401, "UNAUTHORIZED", "Missing or malformed Authorization header",
                        {"WWW-Authenticate": "Bearer"})
-    token = authorization[len("Bearer "):]
+    token = credentials.credentials
     expires = _tokens.get(token)
     if expires is None or expires < time.time():
         raise APIError(401, "UNAUTHORIZED", "Invalid or expired token", {"WWW-Authenticate": "Bearer"})
