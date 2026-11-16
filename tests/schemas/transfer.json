@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["id", "source_account_id", "destination_account_id", "amount", "currency",
+               "narration", "status", "created_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string", "pattern": "^trf_[0-9a-f]{12}$"},
+    "source_account_id": {"type": "string"},
+    "destination_account_id": {"type": "string"},
+    "amount": {"type": "integer", "minimum": 1},
+    "currency": {"enum": ["NGN", "GHS", "USD"]},
+    "narration": {"type": ["string", "null"], "maxLength": 140},
+    "status": {"enum": ["COMPLETED"]},
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}

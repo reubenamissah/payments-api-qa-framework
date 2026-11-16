@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * *"   # nightly regression run, 05:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ruff
+      - run: ruff check .
+
+  api-tests:
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Smoke tests (fast gate)
+        run: pytest -m smoke
+      - name: Full regression suite (parallel)
+        run: >
+          pytest -n auto
+          --html=reports/report.html --self-contained-html
+          --junitxml=reports/junit.xml
+      - name: Publish test summary
+        if: always()
+        run: python scripts/junit_summary.py reports/junit.xml >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report-py${{ matrix.python-version }}
+          path: reports/
+
+  performance:
+    needs: api-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - uses: grafana/setup-k6-action@v1
+      - name: Start API (rate limit raised for load testing)
+        run: |
+          DB_PATH=/tmp/perf.db RATE_LIMIT_PER_MINUTE=1000000 \
+            python -m uvicorn app.main:app --port 8000 --log-level warning &
+          for i in $(seq 1 20); do curl -sf localhost:8000/health && break || sleep 1; done
+      - name: k6 load test (fails the build if thresholds are missed)
+        run: k6 run -e BASE_URL=http://localhost:8000 --summary-export=perf-summary.json perf/transfers.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-summary
+          path: perf-summary.json
+
+  docker:
+    needs: api-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image and run the API tests against the container
+        run: docker compose --profile test up --build --abort-on-container-exit --exit-code-from tests

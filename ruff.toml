@@ -1,0 +1,6 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+# FastAPI's Depends()/Header() in argument defaults is the framework's documented pattern.
+ignore = ["B008"]

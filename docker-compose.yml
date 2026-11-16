@@ -1,0 +1,28 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      RATE_LIMIT_PER_MINUTE: "30"
+      RATE_LIMIT_WINDOW_SECONDS: "5"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+
+  # Runs the same pytest suite against the containerised API (DB-level tests are skipped).
+  tests:
+    profiles: ["test"]
+    image: python:3.12-slim
+    working_dir: /work
+    volumes:
+      - .:/work
+    environment:
+      BASE_URL: http://api:8000
+      PIP_ROOT_USER_ACTION: ignore
+    depends_on:
+      api:
+        condition: service_healthy
+    command: sh -c "pip install -q -r requirements-dev.txt && pytest -n 2 -p no:cacheprovider"
